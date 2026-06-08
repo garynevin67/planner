@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --card: #1c1c1c;
+    --accent: #e8ff3d;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --border: #2a2a2a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 32px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 20px 24px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .content { padding: 24px; }
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .card-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 20px;
+    margin: 14px 14px 0;
+  }
+  .badge-compound { background: rgba(232,255,61,0.15); color: var(--accent); }
+  .badge-accessory { background: rgba(255,107,53,0.15); color: var(--accent2); }
+  .badge-golf { background: rgba(100,200,255,0.15); color: #64c8ff; }
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+    padding: 6px 14px 4px;
+  }
+  .card-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0 14px 12px;
+  }
+  .card-muscles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 0 14px 14px;
+  }
+  .muscle-tag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-header {
+    padding: 20px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 1px;
+  }
+  .close-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .video-box {
+    margin: 16px 20px;
+    background: var(--card);
+    border-radius: 10px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+  .video-box .play-icon { font-size: 2.8rem; }
+  .video-box p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+  .watch-btn {
+    background: #ff0000;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .watch-btn:hover { background: #cc0000; }
+  .modal-body { padding: 0 20px 20px; }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .info-box {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .info-box-label {
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .info-box-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+  }
+  .tips-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .tips-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tips-list li {
+    font-size: 0.83rem;
+    color: #bbb;
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.4;
+  }
+  .tips-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.75rem;
+  }
+  .golf-note {
+    background: rgba(100,200,255,0.08);
+    border: 1px solid rgba(100,200,255,0.2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    color: #aaddff;
+    margin-top: 12px;
+    display: none;
+  }
+  .golf-note.show { display: block; }
+  .golf-note strong { color: #64c8ff; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="subtitle">DUMBBELL EXERCISE REFERENCE</div>
+    <h1>LIFT <span>GUIDE</span></h1>
+  </div>
+  <a href="meal_planner.html" style="margin-left:auto;font-size:0.8rem;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:7px 14px;border-radius:6px;transition:color 0.2s,border-color 0.2s;white-space:nowrap;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+    &#9653; Meal Planner
+  </a>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('all', this)">All</button>
+  <button class="tab" onclick="showTab('compound', this)">Compound</button>
+  <button class="tab" onclick="showTab('accessory', this)">Accessory</button>
+  <button class="tab" onclick="showTab('golf', this)">Golf Priority</button>
+</div>
+
+<div class="content">
+  <div id="exercises-grid" class="grid"></div>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="closeIfOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="video-box">
+      <div class="play-icon">▶️</div>
+      <p id="video-label">Watch a demonstration on YouTube</p>
+      <a id="watch-link" href="#" target="_blank" class="watch-btn">
+        ▶ WATCH ON YOUTUBE
+      </a>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="info-box-label">Sets × Reps</div>
+          <div class="info-box-value" id="modal-reps"></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">Primary Muscles</div>
+          <div class="info-box-value" id="modal-muscles"></div>
+        </div>
+      </div>
+      <div class="tips-title">FORM CUES</div>
+      <ul class="tips-list" id="modal-tips"></ul>
+      <div class="golf-note" id="golf-note">
+        <strong>⛳ Golf benefit:</strong> <span id="golf-note-text"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const exercises = [
+  // COMPOUND
+  { id: 'goblet-squat', name: 'Goblet Squat', type: 'compound', muscles: ['Quads','Glutes','Core'], reps: '3×8–12',
+    tips: ['Hold one dumbbell vertically at chest','Elbows inside knees at bottom','Drive knees out over toes','Stay upright — chest tall'],
+    youtube: 'https://www.youtube.com/results?search_query=goblet+squat+dumbbell+form+tutorial', golf: null },
+  { id: 'db-rdl', name: 'Dumbbell Romanian Deadlift', type: 'compound', muscles: ['Hamstrings','Glutes','Lower Back'], reps: '3×8–12',
+    tips: ['Dumbbells hang in front of thighs','Hinge at hips, slight knee bend','Feel deep stretch in hamstrings','Neutral spine — don\'t round back'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+romanian+deadlift+form+tutorial', golf: 'Hip hinge pattern directly mirrors the golf setup position' },
+  { id: 'db-deadlift', name: 'Dumbbell Deadlift', type: 'compound', muscles: ['Full posterior chain','Traps','Core'], reps: '3×8–10',
+    tips: ['Dumbbells outside each foot','Hips down, chest up before pulling','Push the floor away','Stand tall at the top'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+deadlift+form+tutorial', golf: null },
+  { id: 'split-squat', name: 'Bulgarian Split Squat', type: 'compound', muscles: ['Quads','Glutes','Hip flexors'], reps: '3×8–10 each leg',
+    tips: ['Rear foot elevated on chair or bench','Hold a dumbbell in each hand','Knee tracks over second toe','Control the descent slowly'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+bulgarian+split+squat+form+tutorial', golf: 'Single-leg stability critical for weight transfer in swing' },
+  { id: 'db-bench', name: 'Dumbbell Bench Press', type: 'compound', muscles: ['Chest','Triceps','Front delts'], reps: '3×8–12',
+    tips: ['Lie on bench, dumbbells at chest level','Retract shoulder blades into bench','Press up and slightly together','Control the lowering phase'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+bench+press+form+tutorial', golf: null },
+  { id: 'db-ohp', name: 'Dumbbell Shoulder Press', type: 'compound', muscles: ['Shoulders','Triceps','Upper traps'], reps: '3×8–12',
+    tips: ['Start at ear height, palms forward','Press straight up overhead','Don\'t lean back excessively','Full lockout at top'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+shoulder+press+form+tutorial', golf: null },
+  { id: 'db-row', name: 'Single Arm Dumbbell Row', type: 'compound', muscles: ['Lats','Rhomboids','Biceps'], reps: '3×8–12 each arm',
+    tips: ['Knee and hand on bench for support','Pull dumbbell to hip, not shoulder','Lead with elbow','Full stretch at bottom'],
+    youtube: 'https://www.youtube.com/results?search_query=single+arm+dumbbell+row+form+tutorial', golf: null },
+  { id: 'pullup', name: 'Bodyweight Pull-Ups', type: 'compound', muscles: ['Lats','Biceps','Core'], reps: '3×5–10',
+    tips: ['Full hang at bottom','Pull elbows down to hips','Chin clears the bar','If too hard, use a resistance band for assistance'],
+    youtube: 'https://www.youtube.com/results?search_query=pull+ups+form+tutorial+beginners', golf: null },
+  // ACCESSORY
+  { id: 'hip-thrust', name: 'Dumbbell Hip Thrust', type: 'accessory', muscles: ['Glutes','Hamstrings'], reps: '3×12–15',
+    tips: ['Upper back on bench, dumbbell on hips','Drive hips up to ceiling','Squeeze glutes hard at top','Chin tucked throughout'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+hip+thrust+form+tutorial', golf: 'Glute strength powers the ground-up force in your downswing' },
+  { id: 'db-leg-curl', name: 'Dumbbell Leg Curl', type: 'accessory', muscles: ['Hamstrings'], reps: '3×12–15',
+    tips: ['Lie face down, dumbbell gripped between feet','Curl heels to glutes','Lower slowly — 3 seconds down','Keep hips on floor throughout'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+lying+leg+curl+form+tutorial', golf: null },
+  { id: 'db-pullover', name: 'Dumbbell Pullover', type: 'accessory', muscles: ['Lats','Chest','Core'], reps: '3×12–15',
+    tips: ['Lie across bench, hold one dumbbell overhead with both hands','Keep slight bend in elbows','Arc weight back over head','Feel the lat stretch at the bottom'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+pullover+form+tutorial', golf: null },
+  { id: 'db-face-pull', name: 'Dumbbell Rear Delt Fly', type: 'accessory', muscles: ['Rear delts','Rotator cuff','Upper traps'], reps: '3×15–20',
+    tips: ['Hinge forward at hips 45°','Arms hang below chest','Raise arms out to sides, elbows slightly bent','Squeeze shoulder blades at top'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+rear+delt+fly+form+tutorial', golf: 'Protects shoulder joint — essential for golf longevity' },
+  { id: 'db-woodchop', name: 'Dumbbell Woodchop', type: 'accessory', muscles: ['Obliques','Core','Hips'], reps: '3×12 each side',
+    tips: ['Hold one dumbbell with both hands','Rotate from high to low diagonally','Drive the movement from your hips','Controlled — avoid using momentum'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+woodchop+rotation+form+tutorial', golf: 'Directly trains the rotational pattern of your golf swing' },
+  { id: 'suitcase-carry', name: 'Suitcase Carry', type: 'accessory', muscles: ['Core','Obliques','Traps'], reps: '3×20m each side',
+    tips: ['Hold one dumbbell at side','Stand tall — don\'t lean toward the weight','Brace core hard throughout','Walk slowly and controlled'],
+    youtube: 'https://www.youtube.com/results?search_query=suitcase+carry+dumbbell+form+tutorial', golf: 'Builds the anti-lateral flexion core strength needed for swing stability' },
+  { id: 'lateral-raise', name: 'Lateral Raise', type: 'accessory', muscles: ['Medial delts'], reps: '3×15–20',
+    tips: ['Slight forward lean','Lead with elbows, not hands','Raise to just above shoulder height','Control the descent — that\'s where it works'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+lateral+raise+form+tutorial', golf: 'Shoulder stability and injury prevention for the follow-through' },
+  { id: 'db-incline-row', name: 'Incline Dumbbell Row', type: 'accessory', muscles: ['Mid-back','Lats','Biceps'], reps: '3×12–15',
+    tips: ['Lie chest-down on incline bench','Let arms hang','Pull both dumbbells to hips simultaneously','Squeeze shoulder blades at top'],
+    youtube: 'https://www.youtube.com/results?search_query=incline+dumbbell+row+form+tutorial', golf: null },
+  { id: 'bicep-curl', name: 'Dumbbell Bicep Curl', type: 'accessory', muscles: ['Biceps'], reps: '3×12–15',
+    tips: ['Alternate arms or do both together','Don\'t swing elbows forward','Full range — all the way down','Supinate wrist at top for peak contraction'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+bicep+curl+form+tutorial', golf: null },
+  { id: 'tricep-ext', name: 'Dumbbell Tricep Extension', type: 'accessory', muscles: ['Triceps'], reps: '3×12–15',
+    tips: ['Hold one dumbbell overhead with both hands','Lower behind head, elbows pointing forward','Full extension at top','Keep elbows close to head'],
+    youtube: 'https://www.youtube.com/results?search_query=dumbbell+overhead+tricep+extension+form+tutorial', golf: null },
+  { id: 'dead-bug', name: 'Dead Bug', type: 'accessory', muscles: ['Core','Lower abs'], reps: '3×10 each side',
+    tips: ['Lie on back, arms up, knees at 90°','Lower opposite arm and leg slowly','Keep lower back pressed to floor','Breathe out as you lower'],
+    youtube: 'https://www.youtube.com/results?search_query=dead+bug+exercise+form+tutorial', golf: 'Core stability and anti-extension — key for consistent swing mechanics' },
+];
+
+let currentTab = 'all';
+
+function showTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('exercises-grid');
+  let filtered = exercises;
+  if (currentTab === 'compound') filtered = exercises.filter(e => e.type === 'compound');
+  if (currentTab === 'accessory') filtered = exercises.filter(e => e.type === 'accessory');
+  if (currentTab === 'golf') filtered = exercises.filter(e => e.golf);
+
+  grid.innerHTML = filtered.map(e => `
+    <div class="card" onclick="openModal('${e.id}')">
+      <div class="card-badge badge-${e.golf ? 'golf' : e.type}">
+        ${e.golf ? '⛳ Golf Priority' : e.type === 'compound' ? 'Compound' : 'Accessory'}
+      </div>
+      <div class="card-title">${e.name}</div>
+      <div class="card-meta">${e.reps}</div>
+      <div class="card-muscles">
+        ${e.muscles.map(m => `<span class="muscle-tag">${m}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openModal(id) {
+  const e = exercises.find(x => x.id === id);
+
+  document.getElementById('modal-title').textContent = e.name;
+  document.getElementById('modal-reps').textContent = e.reps;
+  document.getElementById('modal-muscles').textContent = e.muscles.join(', ');
+  document.getElementById('modal-tips').innerHTML = e.tips.map(t => `<li>${t}</li>`).join('');
+  document.getElementById('video-label').textContent = `Watch ${e.name} form demonstration`;
+  document.getElementById('watch-link').href = e.youtube;
+
+  const golfNote = document.getElementById('golf-note');
+  if (e.golf) {
+    document.getElementById('golf-note-text').textContent = e.golf;
+    golfNote.classList.add('show');
+  } else {
+    golfNote.classList.remove('show');
+  }
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeIfOverlay(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+renderGrid();
+</script>
+</body>
+</html>

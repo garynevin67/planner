@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Meal Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0d0b; --surface:#161614; --surface2:#1f1f1c; --surface3:#272724;
+    --border:rgba(255,255,255,0.09); --border2:rgba(255,255,255,0.16);
+    --text:#f5f2ec; --text2:#aca89f; --text3:#6a6762;
+    --breakfast:#f97316; --lunch:#34d399; --dinner:#a78bfa; --shake:#38bdf8;
+    --protein:#4ade80; --carbs:#60a5fa; --fat:#fbbf24;
+    --accent:#d4a853; --accent2:rgba(212,168,83,0.15);
+    --danger:#f87171; --radius:14px; --radius-sm:9px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;min-height:100vh;}
+
+  /* ── TOP BAR ── */
+  .top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 40px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;flex-wrap:wrap;}
+  .save-status{color:var(--text3);display:flex;align-items:center;gap:6px;font-size:12px;}
+  .save-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+  .save-dot.saved{background:var(--protein);}
+  .top-bar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .api-status{color:var(--text3);display:flex;align-items:center;gap:6px;font-size:12px;}
+  .api-dot{width:6px;height:6px;border-radius:50%;}
+  .api-dot.ok{background:var(--protein);} .api-dot.off{background:var(--text3);}
+
+  /* ── HEADER ── */
+  .page-header{background:var(--surface);border-bottom:1px solid var(--border2);padding:24px 40px 20px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .page-header h1{font-family:'DM Serif Display',serif;font-size:32px;font-weight:400;letter-spacing:-.02em;line-height:1;color:var(--text);}
+  .page-header h1 em{color:var(--accent);font-style:italic;}
+  .page-header p{font-size:13px;color:var(--text3);margin-top:5px;}
+
+  /* ── TABS ── */
+  .tab-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 40px;display:flex;gap:4px;}
+  .tab-btn{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;padding:13px 20px 11px;cursor:pointer;transition:color .15s,border-color .15s;}
+  .tab-btn:hover{color:var(--text2);}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  .main{padding:26px 40px 60px;}
+  .view{display:none;} .view.active{display:block;}
+
+  /* ── LEGEND ── */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);align-items:center;}
+  .legend-lbl{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-right:2px;}
+  .leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);font-weight:500;}
+  .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+  /* ── GRID ── */
+  .week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+  .day-col{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;}
+  .day-header{padding:11px 12px 9px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .day-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:.04em;text-transform:uppercase;}
+  .day-date{font-size:11px;color:var(--text3);margin-top:1px;}
+
+  /* ── SLOTS ── */
+  .meal-slot{padding:8px 10px 8px 12px;border-bottom:1px solid var(--border);cursor:pointer;min-height:72px;position:relative;display:flex;flex-direction:column;gap:4px;transition:background .14s;border-left:3px solid transparent;}
+  .meal-slot:last-of-type{border-bottom:none;}
+  .meal-slot:hover{background:var(--surface2);}
+  .meal-slot.s0{border-left-color:var(--breakfast);}
+  .meal-slot.s1{border-left-color:var(--lunch);}
+  .meal-slot.s2{border-left-color:var(--dinner);}
+  .meal-slot.s3,.meal-slot.s4{border-left-color:var(--shake);}
+  .slot-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;}
+  .s0 .slot-type{color:var(--breakfast);} .s1 .slot-type{color:var(--lunch);}
+  .s2 .slot-type{color:var(--dinner);} .s3 .slot-type,.s4 .slot-type{color:var(--shake);}
+  .slot-items{font-size:11px;color:var(--text);line-height:1.4;flex:1;}
+  .slot-item-line{color:var(--text2);font-size:10px;}
+  .slot-empty{font-size:12px;color:var(--text3);flex:1;display:flex;align-items:center;padding-top:2px;}
+  .slot-macros{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;}
+  .mpill{font-size:9px;font-weight:600;padding:2px 5px;border-radius:20px;}
+  .mpill.p{background:rgba(74,222,128,.14);color:#6ee79b;}
+  .mpill.c{background:rgba(96,165,250,.14);color:#7cb9fc;}
+  .mpill.f{background:rgba(251,191,36,.14);color:#fcd060;}
+  .mpill.kc{background:rgba(245,242,236,.07);color:#aca89f;}
+  .del-btn{position:absolute;top:5px;right:5px;background:rgba(248,113,113,.12);border:none;border-radius:4px;color:var(--danger);width:17px;height:17px;font-size:9px;cursor:pointer;display:none;align-items:center;justify-content:center;transition:background .12s;}
+  .del-btn:hover{background:rgba(248,113,113,.28);}
+  .meal-slot:hover .del-btn{display:flex;}
+
+  /* ── DAILY TOTALS ── */
+  .day-totals{margin-top:auto;padding:10px 12px;background:var(--surface2);border-top:1px solid var(--border2);}
+  .day-kcal{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px;}
+  .day-macro-blocks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:4px;}
+  .macro-block{background:var(--surface3);border-radius:6px;padding:6px 4px 5px;text-align:center;}
+  .macro-block-val{font-size:13px;font-weight:600;line-height:1;margin-bottom:2px;}
+  .macro-block-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:2px;}
+  .bar-track{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:3px;}
+  .bar-fill{height:100%;border-radius:2px;transition:width .35s ease;}
+  .bar-fill.p{background:var(--protein);} .bar-fill.c{background:var(--carbs);} .bar-fill.f{background:var(--fat);}
+  .day-no-meals{font-size:11px;color:var(--text3);text-align:center;padding:2px 0;}
+
+  /* ── BUTTONS ── */
+  .btn{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 17px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;transition:background .13s,border-color .13s;display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--surface3);border-color:rgba(255,255,255,.22);}
+  .btn.accent{background:var(--accent);color:#0d0d0b;border-color:var(--accent);font-weight:600;}
+  .btn.accent:hover{background:#e2b660;}
+  .btn.ai{background:rgba(212,168,83,.12);border:1px solid rgba(212,168,83,.35);color:var(--accent);font-weight:600;}
+  .btn.ai:hover{background:rgba(212,168,83,.22);}
+  .btn.ai:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.sm{font-size:12px;padding:7px 13px;}
+  .btn.xs{font-size:11px;padding:5px 10px;}
+  .btn.full{width:100%;justify-content:center;}
+  .btn.danger{border-color:rgba(248,113,113,.28);color:#f87171;}
+  .btn.danger:hover{background:rgba(248,113,113,.1);}
+
+  /* ── MODAL ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:26px;width:560px;max-width:100%;box-shadow:0 32px 100px rgba(0,0,0,.7);max-height:92vh;overflow-y:auto;}
+  .modal-title{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--text);margin-bottom:18px;}
+
+  /* ── MODE TOGGLE ── */
+  .mode-toggle{display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border2);border-radius:var(--radius-sm);overflow:hidden;}
+  .mode-btn{flex:1;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 12px;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:background .12s,color .12s;border-right:1px solid var(--border2);}
+  .mode-btn:last-child{border-right:none;}
+  .mode-btn.active{background:var(--surface2);color:var(--text);}
+  .mode-btn:hover:not(.active){background:rgba(255,255,255,.04);}
+
+  /* ── AI MODE ── */
+  .ai-mode{display:none;} .ai-mode.show{display:block;}
+  .describe-row{display:flex;gap:8px;margin-bottom:8px;}
+  .describe-row textarea{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 13px;outline:none;resize:none;height:60px;transition:border-color .15s;line-height:1.5;}
+  .describe-row textarea:focus{border-color:var(--accent);}
+  .describe-row textarea::placeholder{color:var(--text3);}
+  .ai-examples{font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.7;}
+  .ai-examples span{color:var(--accent);cursor:pointer;margin-right:8px;font-style:italic;}
+  .ai-examples span:hover{text-decoration:underline;}
+  .ai-status-msg{font-size:12px;min-height:18px;margin-bottom:10px;padding:8px 12px;border-radius:var(--radius-sm);display:none;}
+  .ai-status-msg.show{display:block;}
+  .ai-status-msg.thinking{background:var(--accent2);color:var(--accent);}
+  .ai-status-msg.err{background:rgba(248,113,113,.12);color:#f87171;}
+
+  /* ── SEARCH MODE ── */
+  .search-mode{display:none;} .search-mode.show{display:block;}
+  .search-row{display:flex;gap:8px;margin-bottom:6px;}
+  .search-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .15s;}
+  .search-row input:focus{border-color:var(--accent);}
+  .search-row input::placeholder{color:var(--text3);}
+  .qty-mini{width:66px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 8px;outline:none;text-align:center;}
+  .unit-mini{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 8px;outline:none;cursor:pointer;}
+  .ac-list{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);margin-bottom:10px;max-height:180px;overflow-y:auto;display:none;}
+  .ac-list.open{display:block;}
+  .ac-item{padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s;}
+  .ac-item:last-child{border-bottom:none;}
+  .ac-item:hover,.ac-item.hi{background:var(--surface3);}
+  .ac-name{font-size:13px;color:var(--text);}
+  .ac-meta{font-size:11px;color:var(--text3);white-space:nowrap;display:flex;gap:5px;}
+  .ac-meta .ap{color:#6ee79b;} .ac-meta .ac2{color:#7cb9fc;} .ac-meta .af{color:#fcd060;}
+
+  /* ── INGREDIENT LIST ── */
+  .ing-section-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:7px;margin-top:14px;}
+  .ing-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+  .ing-row{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;}
+  .ing-name{flex:1;font-size:13px;color:var(--text);}
+  .ing-qty-lbl{font-size:11px;color:var(--text3);white-space:nowrap;}
+  .ing-macros{display:flex;gap:3px;}
+  .ing-remove{background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:3px;transition:color .12s,background .12s;}
+  .ing-remove:hover{color:var(--danger);background:rgba(248,113,113,.12);}
+  .ing-empty{font-size:12px;color:var(--text3);padding:6px 0;}
+
+  /* ── MEAL TOTAL ── */
+  .meal-preview{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:14px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .preview-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-right:2px;}
+  .preview-stat{font-size:14px;font-weight:600;}
+  .preview-stat.kcal{color:var(--accent);} .preview-stat.pp{color:#6ee79b;} .preview-stat.pc{color:#7cb9fc;} .preview-stat.pf{color:#fcd060;}
+  .preview-unit{font-size:11px;color:var(--text3);font-weight:400;}
+
+  .divider{display:flex;align-items:center;gap:10px;margin:12px 0;}
+  .divider span{font-size:11px;color:var(--text3);white-space:nowrap;text-transform:uppercase;letter-spacing:.08em;}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  .form-group{margin-bottom:12px;}
+  .form-group label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--text2);margin-bottom:6px;}
+  .form-group input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .15s;}
+  .form-group input:focus{border-color:var(--accent);}
+  .form-group input::placeholder{color:var(--text3);}
+  .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;}
+
+  /* ── API KEY MODAL ── */
+  .apikey-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;width:460px;max-width:100%;}
+  .apikey-modal h3{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--text);margin-bottom:8px;}
+  .apikey-modal p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;}
+  .apikey-modal p a{color:var(--accent);text-decoration:none;}
+  .apikey-row{display:flex;gap:10px;margin-bottom:8px;}
+  .apikey-row input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .15s;}
+  .apikey-row input:focus{border-color:var(--accent);}
+  .apikey-row input::placeholder{color:var(--text3);}
+  .apikey-note{font-size:12px;color:var(--text3);line-height:1.5;}
+
+  /* ── SYNC MODAL ── */
+  .sync-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:28px;width:500px;max-width:100%;}
+  .sync-modal h3{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--text);margin-bottom:8px;}
+  .sync-modal p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6;}
+  .sync-textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:11px 13px;outline:none;resize:vertical;height:120px;line-height:1.4;transition:border-color .15s;}
+  .sync-textarea:focus{border-color:var(--accent);}
+  .sync-note{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5;}
+
+  /* ── SPINNER ── */
+  .spinner{width:14px;height:14px;border:2px solid rgba(212,168,83,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ── SHOPPING ── */
+  .shopping-top{display:flex;gap:12px;margin-bottom:26px;flex-wrap:wrap;align-items:center;}
+  .shop-meta{font-size:14px;color:var(--text2);flex:1;min-width:160px;}
+  .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:13px;}
+  .shop-category{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:15px 17px;}
+  .shop-cat-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .shop-item{display:flex;align-items:flex-start;gap:9px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .shop-item:last-child{border-bottom:none;}
+  .shop-item input[type=checkbox]{margin-top:3px;accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;cursor:pointer;}
+  .shop-item label{font-size:13px;color:var(--text);line-height:1.4;cursor:pointer;}
+  .shop-item.done label{color:var(--text3);text-decoration:line-through;}
+  .empty-state{text-align:center;padding:56px 20px;color:var(--text3);}
+  .empty-state .es-icon{font-size:36px;opacity:.22;margin-bottom:11px;}
+  .empty-state p{font-size:14px;line-height:1.6;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:26px;right:26px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:11px 17px;font-size:13px;color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.55);transform:translateY(14px);opacity:0;transition:opacity .2s,transform .2s;z-index:9999;pointer-events:none;max-width:280px;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.ok{border-color:rgba(74,222,128,.35);color:#6ee79b;}
+  .toast.err{border-color:rgba(248,113,113,.35);color:#f87171;}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP BAR ═══ -->
+<div class="top-bar">
+  <div class="save-status">
+    <span class="save-dot saved" id="save-dot"></span>
+    <span id="save-status-txt">Plan saved locally</span>
+  </div>
+  <div class="top-bar-actions">
+    <div class="api-status">
+      <span class="api-dot" id="api-dot"></span>
+      <span id="api-status-txt"></span>
+    </div>
+    <button class="btn sm" onclick="openSyncModal()">&#8645;&ensp;Sync to another device</button>
+    <button class="btn sm" onclick="openApiKeyModal()">&#9733;&ensp;AI key</button>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header class="page-header">
+  <div>
+    <h1>Weekly <em>Meal Planner</em></h1>
+    <p>Describe a meal in plain English &mdash; AI calculates macros. Plan saves automatically to this browser.</p>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a href="Exercise_Guide.html" style="font-size:12px;color:var(--text3);text-decoration:none;border:1px solid var(--border2);padding:7px 14px;border-radius:var(--radius-sm);transition:color 0.2s,border-color 0.2s;white-space:nowrap;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='';this.style.borderColor=''">&#9653; Exercise Guide</a>
+    <button class="btn danger sm" onclick="clearWeek()">&#x2715;&ensp;Clear week</button>
+  </div>
+</header>
+
+<!-- ═══ TABS ═══ -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('planner',this)">&#9776;&ensp;Meal Planner</button>
+  <button class="tab-btn" onclick="showTab('shopping',this)">&#9673;&ensp;Shopping List</button>
+</nav>
+
+<main class="main">
+  <div class="view active" id="view-planner">
+    <div class="legend">
+      <span class="legend-lbl">Meals:</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--breakfast)"></span>Breakfast</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--lunch)"></span>Lunch</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--dinner)"></span>Dinner</span>
+      <span class="leg-item"><span class="leg-dot" style="background:var(--shake)"></span>Protein Shake</span>
+      <span style="margin-left:auto;display:flex;gap:13px;align-items:center;">
+        <span class="leg-item"><span class="leg-dot" style="background:var(--protein);border-radius:2px;"></span>Protein</span>
+        <span class="leg-item"><span class="leg-dot" style="background:var(--carbs);border-radius:2px;"></span>Carbs</span>
+        <span class="leg-item"><span class="leg-dot" style="background:var(--fat);border-radius:2px;"></span>Fat</span>
+      </span>
+    </div>
+    <div class="week-grid" id="week-grid"></div>
+  </div>
+
+  <div class="view" id="view-shopping">
+    <div class="shopping-top">
+      <p class="shop-meta" id="shop-meta">Add meals to your planner, then generate your shopping list here.</p>
+      <button class="btn accent" onclick="buildShoppingList()">&#9673;&ensp;Generate shopping list</button>
+      <button class="btn sm" onclick="copyList()">&#9781;&ensp;Copy list</button>
+    </div>
+    <div id="shop-output">
+      <div class="empty-state">
+        <div class="es-icon">&#9673;</div>
+        <p>Plan your meals, then hit<br>&ldquo;Generate shopping list&rdquo; above.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ═══ MEAL MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title">Add Breakfast — Monday</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-ai-btn" onclick="setMode('ai')">&#9733;&ensp;Describe meal (AI)</button>
+      <button class="mode-btn" id="mode-search-btn" onclick="setMode('search')">&#9740;&ensp;Search food database</button>
+    </div>
+
+    <div class="ai-mode show" id="ai-mode">
+      <div class="describe-row">
+        <textarea id="describe-input" placeholder="e.g. chicken lentil curry in a wrap&#10;e.g. smoked salmon, scrambled eggs and avocado on sourdough&#10;e.g. whey protein shake with oat milk and banana" onkeydown="describeKey(event)"></textarea>
+        <button class="btn ai" id="ai-go-btn" onclick="runDescribe()" style="align-self:flex-end;white-space:nowrap;">
+          <span id="ai-go-inner">&#9733;&ensp;Calculate</span>
+        </button>
+      </div>
+      <div class="ai-examples">
+        <strong style="color:var(--text3);">Try:</strong>
+        <span onclick="setExample('chicken lentil curry in a wrap')">chicken lentil curry in a wrap</span>
+        <span onclick="setExample('smoked salmon, scrambled eggs and avocado on sourdough')">smoked salmon, scrambled eggs &amp; avocado</span>
+        <span onclick="setExample('whey protein shake with oat milk and a banana')">protein shake with oat milk &amp; banana</span>
+        <span onclick="setExample('overnight oats with greek yogurt, blueberries and honey')">overnight oats with yogurt &amp; berries</span>
+      </div>
+      <div class="ai-status-msg" id="ai-status-msg"></div>
+    </div>
+
+    <div class="search-mode" id="search-mode">
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Search food (e.g. salmon, oats, chicken breast…)"
+          oninput="doSearch(this.value)" onkeydown="searchKey(event)" autocomplete="off">
+        <input type="number" id="qty-input" class="qty-mini" value="1" min="0.1" step="0.25">
+        <select id="unit-select" class="unit-mini">
+          <option value="serving">serving</option>
+          <option value="100g">per 100g</option>
+          <option value="half">half</option>
+          <option value="double">double</option>
+        </select>
+        <button class="btn accent xs" onclick="addIngredient()">+ Add</button>
+      </div>
+      <div class="ac-list" id="ac-list"></div>
+    </div>
+
+    <div class="ing-section-lbl">Ingredients in this meal</div>
+    <div class="ing-list" id="ing-list"></div>
+
+    <div class="meal-preview">
+      <span class="preview-label">Meal total:</span>
+      <span><span class="preview-stat kcal" id="prev-kcal">0</span><span class="preview-unit"> kcal</span></span>
+      <span><span class="preview-stat pp" id="prev-p">0</span><span class="preview-unit">g protein</span></span>
+      <span><span class="preview-stat pc" id="prev-c">0</span><span class="preview-unit">g carbs</span></span>
+      <span><span class="preview-stat pf" id="prev-f">0</span><span class="preview-unit">g fat</span></span>
+    </div>
+
+    <div class="divider"><span>meal label</span></div>
+    <div class="form-group">
+      <label>Meal name <span style="font-weight:400;font-size:11px;color:var(--text3);text-transform:none;letter-spacing:0;">(auto-filled, or customise)</span></label>
+      <input type="text" id="meal-name-input" placeholder="e.g. Chicken lentil curry wrap">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn danger xs" onclick="clearIngredients()">Clear all</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn accent" onclick="saveMeal()">Save meal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ API KEY MODAL ═══ -->
+<div class="modal-overlay" id="apikey-overlay" onclick="if(event.target===this)closeApiKeyModal()">
+  <div class="apikey-modal" onclick="event.stopPropagation()">
+    <h3>AI meal description</h3>
+    <p>Paste your Anthropic API key to describe meals in plain English. Get one free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — costs fractions of a cent per use. Key is saved in this browser only.</p>
+    <div class="apikey-row">
+      <input type="password" id="apikey-input" placeholder="eyJ… or sk-ant-…" autocomplete="off">
+      <button class="btn accent" onclick="saveApiKey()">Save</button>
+    </div>
+    <p class="apikey-note" style="margin-bottom:14px;">Your key is stored only in this browser. Never shared anywhere.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn danger xs" onclick="clearApiKey()">Remove key</button>
+      <button class="btn sm" onclick="closeApiKeyModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SYNC MODAL ═══ -->
+<div class="modal-overlay" id="sync-overlay" onclick="if(event.target===this)closeSyncModal()">
+  <div class="sync-modal" onclick="event.stopPropagation()">
+    <h3>Sync to another device</h3>
+    <p>Copy your plan to any other device in seconds — no account needed. Export on this device, paste and import on the other.</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn accent" onclick="exportPlan()" style="flex:1;justify-content:center;">&#8593;&ensp;Export — copy my plan</button>
+      <button class="btn" onclick="importPlan()" style="flex:1;justify-content:center;">&#8595;&ensp;Import — paste a plan</button>
+    </div>
+
+    <textarea class="sync-textarea" id="sync-textarea" placeholder="Export: your plan code will appear here — copy it all.&#10;&#10;Import: paste a plan code here, then click Import above."></textarea>
+    <p class="sync-note" id="sync-note">Export your plan above, then open this file on another device, paste the code and click Import.</p>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+      <button class="btn sm" onclick="closeSyncModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// NUTRITION DATABASE [name, p/100g, c/100g, f/100g, serving_g, serving_label]
+// ═══════════════════════════════════════════════════
+const DB = [
+  ["Chicken breast (grilled)",31,0,3.6,150,"150g"],["Chicken breast (boiled)",30,0,3.2,150,"150g"],
+  ["Chicken thigh (grilled)",25,0,9,120,"120g"],["Turkey breast",29,0,2,150,"150g"],
+  ["Beef mince (lean 5%)",26,0,5,150,"150g"],["Beef mince (20% fat)",20,0,20,150,"150g"],
+  ["Beef steak (sirloin)",27,0,9,200,"200g"],["Ribeye steak",24,0,18,220,"220g"],
+  ["Lamb chops",25,0,18,150,"150g"],["Pork tenderloin",26,0,4,150,"150g"],
+  ["Bacon (grilled)",30,0,27,50,"3 rashers"],["Venison",22,0,3,150,"150g"],
+  ["Salmon fillet",20,0,13,150,"150g"],["Smoked salmon",18,0,12,80,"80g"],
+  ["Tuna (canned in water)",26,0,1,120,"120g drained"],["Tuna steak (grilled)",29,0,6,150,"150g"],
+  ["Cod fillet",18,0,1,150,"150g"],["Sea bass fillet",19,0,3,150,"150g"],
+  ["Mackerel fillet",19,0,16,150,"150g"],["Sardines (canned)",21,0,11,100,"100g"],
+  ["King prawns (cooked)",22,0,1,100,"100g"],["Tilapia fillet",21,0,2,150,"150g"],
+  ["Whole egg",13,1,11,60,"1 large egg"],["Egg whites",11,1,0,100,"3 egg whites"],
+  ["Scrambled eggs (2 eggs)",14,1,12,120,"2-egg portion"],["Scrambled eggs (3 eggs)",21,1,18,180,"3-egg portion"],
+  ["Boiled egg",13,1,11,60,"1 egg"],["Fried egg",14,0,15,60,"1 egg"],
+  ["Omelette (3 eggs)",26,2,20,180,"3-egg"],
+  ["Greek yogurt (full fat)",9,4,5,200,"200g"],["Greek yogurt (0% fat)",10,4,0,200,"200g"],
+  ["Cottage cheese (low fat)",11,3,1,150,"150g"],["Cheddar cheese",25,1,33,30,"30g slice"],
+  ["Mozzarella",22,2,17,50,"50g"],["Feta cheese",14,4,21,50,"50g"],
+  ["Milk (whole)",3,5,4,250,"250ml"],["Milk (skimmed)",3,5,0,250,"250ml"],
+  ["Soy milk (unsweetened)",3,1,2,250,"250ml"],["Oat milk",1,7,2,250,"250ml"],
+  ["Butter",1,0,81,10,"1 tbsp"],
+  ["Whey protein (1 scoop)",25,3,2,35,"1 scoop (35g)"],
+  ["Casein protein (1 scoop)",24,4,2,35,"1 scoop (35g)"],
+  ["Plant protein / pea (1 scoop)",20,4,3,35,"1 scoop (35g)"],
+  ["Mass gainer shake",30,60,5,100,"1 serving"],["Protein bar",21,23,9,60,"1 bar"],
+  ["White rice (cooked)",3,28,0,180,"180g cooked"],["Brown rice (cooked)",3,23,1,180,"180g cooked"],
+  ["Basmati rice (cooked)",3,27,0,180,"180g cooked"],
+  ["Oats (dry rolled)",13,58,7,80,"80g dry"],["Porridge (milk)",5,17,3,350,"350g bowl"],
+  ["White pasta (cooked)",5,25,1,200,"200g cooked"],["Wholegrain pasta (cooked)",5,22,1,200,"200g cooked"],
+  ["White bread",9,49,3,30,"1 slice"],["Wholegrain bread",10,41,4,30,"1 slice"],
+  ["Sourdough bread",8,43,1,40,"1 thick slice"],["Tortilla wrap (flour)",8,49,8,60,"1 wrap"],
+  ["Bagel (plain)",10,48,2,105,"1 bagel"],
+  ["Sweet potato (baked)",2,21,0,200,"1 medium"],["White potato (boiled)",2,17,0,200,"1 medium"],
+  ["Quinoa (cooked)",4,22,2,185,"185g"],["Couscous (cooked)",4,23,0,180,"180g"],
+  ["Granola",11,60,20,80,"80g"],["Muesli",10,58,8,80,"80g"],
+  ["Banana",1,23,0,120,"1 medium"],["Apple",0,14,0,180,"1 large"],
+  ["Blueberries",1,14,0,150,"150g punnet"],["Strawberries",1,8,0,150,"150g"],
+  ["Avocado (half)",2,9,15,100,"half avocado"],["Avocado (whole)",2,9,15,200,"1 whole"],
+  ["Berries (mixed)",1,12,0,150,"150g"],
+  ["Broccoli",3,7,0,200,"200g florets"],["Spinach (raw)",3,4,0,100,"100g"],
+  ["Kale",4,9,1,100,"100g"],["Mixed salad leaves",2,2,0,80,"80g bag"],
+  ["Tomato",1,4,0,130,"1 medium"],["Cherry tomatoes",1,5,0,150,"150g"],
+  ["Cucumber",1,4,0,80,"quarter"],["Carrot",1,10,0,120,"2 medium"],
+  ["Bell pepper",1,6,0,120,"1 pepper"],["Courgette / zucchini",2,3,0,150,"1 medium"],
+  ["Asparagus",3,4,0,150,"10 spears"],["Mushrooms",2,4,0,150,"150g"],
+  ["Onion",1,9,0,150,"1 large"],["Garlic",6,33,0,10,"3 cloves"],
+  ["Chickpeas (canned, drained)",9,27,3,240,"240g"],["Red lentils (cooked)",9,20,0,200,"200g"],
+  ["Black beans (canned)",9,23,1,240,"240g"],["Kidney beans (canned)",9,22,1,240,"240g"],
+  ["Tofu (firm)",12,2,5,150,"150g"],["Tempeh",19,9,11,100,"100g"],["Hummus",5,8,9,60,"2 tbsp"],
+  ["Olive oil",0,0,100,14,"1 tbsp"],["Peanut butter",25,20,50,32,"2 tbsp"],
+  ["Almond butter",21,22,56,32,"2 tbsp"],["Chia seeds",17,42,31,15,"1 tbsp"],
+  ["Mixed nuts",15,20,55,30,"small handful"],
+  ["Soy sauce",8,8,0,15,"1 tbsp"],["Pesto (basil)",5,5,28,40,"2 tbsp"],
+  ["Coconut milk (canned)",2,3,20,100,"100ml"],
+];
+
+const SHOP_CATS = [
+  {name:"Protein & Meat",       kw:["chicken","beef","turkey","lamb","pork","bacon","steak","mince","venison"]},
+  {name:"Fish & Seafood",       kw:["salmon","tuna","cod","bass","prawn","mackerel","sardine","tilapia","fish","shrimp"]},
+  {name:"Eggs & Dairy",         kw:["egg","milk","yogurt","yoghurt","cheese","cheddar","mozzarella","feta","parmesan","cottage","butter","cream"]},
+  {name:"Protein Supplements",  kw:["whey","casein","protein bar","mass gainer","protein powder","protein shake","pea protein","plant protein"]},
+  {name:"Vegetables",           kw:["broccoli","spinach","kale","salad","tomato","cucumber","carrot","pepper","courgette","asparagus","beans","peas","edamame","mushroom","onion","garlic","cauliflower","zucchini"]},
+  {name:"Fruit",                kw:["banana","apple","orange","blueberr","strawberr","raspberr","mango","pineapple","grape","melon","kiwi","pear","avocado","berr","lemon","lime"]},
+  {name:"Grains, Bread & Pasta",kw:["rice","pasta","oat","bread","potato","quinoa","bulgur","couscous","granola","muesli","tortilla","pita","wrap","bagel"]},
+  {name:"Legumes & Tofu",       kw:["chickpea","lentil","bean","tofu","tempeh","hummus"]},
+  {name:"Nuts, Seeds & Oils",   kw:["almond","walnut","cashew","peanut","nut","seed","chia","olive oil","coconut oil"]},
+  {name:"Condiments & Extras",  kw:["sauce","pesto","ketchup","mayo","soy","tahini","spice","herb","vinegar","coconut milk"]},
+];
+function categorise(name){const l=name.toLowerCase();for(const c of SHOP_CATS)if(c.kw.some(k=>l.includes(k)))return c.name;return "Other";}
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const SLOTS = ['Breakfast','Lunch','Dinner','Protein Shake 1','Protein Shake 2'];
+const LS_KEY = 'mp_meals_v1';
+let meals={}, activeKey=null, currentIngs=[], selectedFood=null, acHL=-1, currentMode='ai';
+
+// ═══════════════════════════════════════════════════
+// LOCAL STORAGE SAVE/LOAD
+// ═══════════════════════════════════════════════════
+function localSave(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(meals));setSaveStatus('saved');}
+  catch(e){setSaveStatus('error');}
+}
+function localLoad(){
+  try{const d=localStorage.getItem(LS_KEY);if(d)meals=JSON.parse(d);}
+  catch(e){meals={};}
+}
+function setSaveStatus(state){
+  const dot=document.getElementById('save-dot'),txt=document.getElementById('save-status-txt');
+  dot.className='save-dot'+(state==='saved'?' saved':'');
+  txt.textContent=state==='saved'?'Plan saved locally':'Save error';
+}
+
+// ═══════════════════════════════════════════════════
+// API KEY
+// ═══════════════════════════════════════════════════
+function getApiKey(){return localStorage.getItem('mp_api_key')||'';}
+function saveApiKey(){
+  const k=document.getElementById('apikey-input').value.trim();
+  if(!k||k.length<20){alert('Please paste your full API key');return;}
+  localStorage.setItem('mp_api_key',k);
+  closeApiKeyModal();updateApiBar();toast('API key saved — AI mode ready','ok');
+}
+function clearApiKey(){
+  localStorage.removeItem('mp_api_key');
+  document.getElementById('apikey-input').value='';
+  updateApiBar();toast('API key removed','');
+}
+function openApiKeyModal(){
+  document.getElementById('apikey-input').value=getApiKey();
+  document.getElementById('apikey-overlay').classList.add('open');
+}
+function closeApiKeyModal(){document.getElementById('apikey-overlay').classList.remove('open');}
+function updateApiBar(){
+  const has=!!getApiKey();
+  document.getElementById('api-dot').className='api-dot '+(has?'ok':'off');
+  document.getElementById('api-status-txt').textContent=has?'AI active':'AI key not set';
+}
+
+// ═══════════════════════════════════════════════════
+// SYNC (EXPORT / IMPORT)
+// ═══════════════════════════════════════════════════
+function openSyncModal(){document.getElementById('sync-overlay').classList.add('open');document.getElementById('sync-textarea').value='';document.getElementById('sync-note').textContent='Export your plan above, then open this file on another device, paste the code and click Import.';}
+function closeSyncModal(){document.getElementById('sync-overlay').classList.remove('open');}
+
+function exportPlan(){
+  const data=btoa(unescape(encodeURIComponent(JSON.stringify(meals))));
+  document.getElementById('sync-textarea').value=data;
+  navigator.clipboard.writeText(data).then(()=>{
+    document.getElementById('sync-note').textContent='✓ Plan copied to clipboard! Paste it on your other device.';
+    toast('Plan copied to clipboard','ok');
+  }).catch(()=>{
+    document.getElementById('sync-note').textContent='Copy the text above manually (Cmd+A then Cmd+C).';
+  });
+}
+
+function importPlan(){
+  const raw=document.getElementById('sync-textarea').value.trim();
+  if(!raw){document.getElementById('sync-note').textContent='Paste your exported plan code first, then click Import.';return;}
+  try{
+    const decoded=JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if(typeof decoded!=='object')throw new Error('Invalid');
+    if(confirm('This will replace your current plan on this device. Continue?')){
+      meals=decoded;localSave();renderGrid();closeSyncModal();toast('Plan imported successfully','ok');
+    }
+  }catch(e){
+    document.getElementById('sync-note').textContent='⚠ Invalid code — make sure you copied the full export text.';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// MODE TOGGLE
+// ═══════════════════════════════════════════════════
+function setMode(mode){
+  currentMode=mode;
+  document.getElementById('mode-ai-btn').classList.toggle('active',mode==='ai');
+  document.getElementById('mode-search-btn').classList.toggle('active',mode==='search');
+  document.getElementById('ai-mode').classList.toggle('show',mode==='ai');
+  document.getElementById('search-mode').classList.toggle('show',mode==='search');
+  if(mode==='ai')setTimeout(()=>document.getElementById('describe-input').focus(),60);
+  else setTimeout(()=>document.getElementById('search-input').focus(),60);
+}
+
+// ═══════════════════════════════════════════════════
+// AI DESCRIBE
+// ═══════════════════════════════════════════════════
+function setExample(txt){document.getElementById('describe-input').value=txt;document.getElementById('describe-input').focus();}
+function describeKey(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runDescribe();}}
+
+async function runDescribe(){
+  const desc=document.getElementById('describe-input').value.trim();
+  if(!desc)return;
+  const key=getApiKey();
+  if(!key){openApiKeyModal();return;}
+  const btn=document.getElementById('ai-go-btn');
+  document.getElementById('ai-go-inner').innerHTML='<span class="spinner" style="width:13px;height:13px;"></span>';
+  btn.disabled=true;
+  setAiMsg('Analysing your meal…','thinking');
+  const prompt=`You are a precise nutrition database. The user described a meal as: "${desc}"
+Break this into individual components. Estimate realistic single-serving portions and calculate macros.
+Return ONLY raw valid JSON — no markdown, no code fences:
+{"mealName":"descriptive name","ingredients":[{"name":"ingredient name","portionLabel":"e.g. 150g, 1 wrap","protein":NUMBER,"carbs":NUMBER,"fat":NUMBER}]}
+All macro values must be integers in grams.`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){
+      let msg=`HTTP ${res.status}`;
+      try{const e=await res.json();
+        if(res.status===401)msg='Invalid API key — click AI key in the top bar to update it';
+        else if(res.status===429)msg='Rate limit — wait a moment and try again';
+        else if(res.status===402)msg='No credit balance — add credit at console.anthropic.com';
+        else msg=e.error?.message||msg;
+      }catch(e){}
+      throw new Error(msg);
+    }
+    const data=await res.json();
+    const raw=(data.content?.[0]?.text||'').trim().replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+    const d=JSON.parse(raw);
+    d.ingredients.forEach(ing=>{currentIngs.push({name:ing.name,p:Math.round(ing.protein||0),c:Math.round(ing.carbs||0),f:Math.round(ing.fat||0),grams:0,label:ing.portionLabel||''});});
+    const nf=document.getElementById('meal-name-input');
+    if(!nf._userEdited)nf.value=d.mealName||desc;
+    updateIngList();
+    setAiMsg(`✓ Found ${d.ingredients.length} ingredients — review below and save`,'thinking');
+    document.getElementById('describe-input').value='';
+  }catch(err){
+    console.error(err);
+    setAiMsg(err.message,'err');
+  }
+  document.getElementById('ai-go-inner').innerHTML='&#9733;&ensp;Calculate';
+  btn.disabled=false;
+}
+
+function setAiMsg(msg,type){
+  const el=document.getElementById('ai-status-msg');
+  el.className='ai-status-msg show '+(type||'');
+  if(type==='err'){
+    el.innerHTML=esc(msg)+' &nbsp;<button onclick="openApiKeyModal()" style="background:none;border:none;color:var(--accent);font-family:inherit;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">Update key</button>';
+  }else{el.textContent=msg;}
+}
+
+// ═══════════════════════════════════════════════════
+// FOOD SEARCH
+// ═══════════════════════════════════════════════════
+function doSearch(q){
+  selectedFood=null;
+  const list=document.getElementById('ac-list'),term=q.trim().toLowerCase();
+  if(term.length<2){list.classList.remove('open');list.innerHTML='';acHL=-1;return;}
+  const res=DB.filter(r=>r[0].toLowerCase().includes(term)).slice(0,10);
+  if(!res.length){list.classList.remove('open');list.innerHTML='';return;}
+  list.innerHTML=res.map((r,i)=>{
+    const k=Math.round(r[1]*4+r[2]*4+r[3]*9);
+    return `<div class="ac-item" id="ac${i}" onclick="pickFood(${DB.indexOf(r)})">
+      <span class="ac-name">${esc(r[0])}</span>
+      <span class="ac-meta"><span class="ap">P ${r[1]}g</span><span class="ac2">C ${r[2]}g</span><span class="af">F ${r[3]}g</span>&middot;${k}kcal<span style="color:var(--text3);margin-left:3px;">/${r[5]}</span></span>
+    </div>`;
+  }).join('');
+  list.classList.add('open');acHL=-1;
+}
+function searchKey(e){
+  const items=document.querySelectorAll('.ac-item');
+  if(e.key==='ArrowDown'){e.preventDefault();acHL=Math.min(acHL+1,items.length-1);hlAC(items);}
+  else if(e.key==='ArrowUp'){e.preventDefault();acHL=Math.max(acHL-1,-1);hlAC(items);}
+  else if(e.key==='Enter'&&acHL>=0){e.preventDefault();items[acHL].click();}
+  else if(e.key==='Escape')document.getElementById('ac-list').classList.remove('open');
+}
+function hlAC(items){items.forEach((el,i)=>el.classList.toggle('hi',i===acHL));}
+function pickFood(idx){
+  selectedFood=DB[idx];
+  document.getElementById('search-input').value=selectedFood[0];
+  document.getElementById('ac-list').classList.remove('open');
+  document.getElementById('unit-select').value='serving';
+  document.getElementById('qty-input').value=1;
+  acHL=-1;
+}
+function addIngredient(){
+  if(!selectedFood){toast('Select a food from the list first','');return;}
+  const [name,p100,c100,f100,servG,servLabel]=selectedFood;
+  const unit=document.getElementById('unit-select').value,qty=parseFloat(document.getElementById('qty-input').value)||1;
+  let grams=unit==='100g'?100*qty:unit==='half'?(servG/2)*qty:unit==='double'?servG*2*qty:servG*qty;
+  const r=grams/100,p=Math.round(p100*r),c=Math.round(c100*r),f=Math.round(f100*r);
+  const qLabel=unit==='100g'?`${Math.round(grams)}g`:qty!==1?`${qty}× ${servLabel}`:servLabel;
+  currentIngs.push({name,p,c,f,grams:Math.round(grams),label:qLabel});
+  updateIngList();
+  document.getElementById('search-input').value='';
+  document.getElementById('qty-input').value=1;
+  selectedFood=null;
+  document.getElementById('search-input').focus();
+}
+
+// ═══════════════════════════════════════════════════
+// INGREDIENT LIST
+// ═══════════════════════════════════════════════════
+function removeIng(idx){currentIngs.splice(idx,1);updateIngList();}
+function clearIngredients(){currentIngs=[];updateIngList();}
+function updateIngList(){
+  const list=document.getElementById('ing-list');
+  list.innerHTML=!currentIngs.length
+    ?'<div class="ing-empty">No ingredients yet — describe a meal above or search the food database</div>'
+    :currentIngs.map((ing,i)=>`
+      <div class="ing-row">
+        <span class="ing-name">${esc(ing.name)}</span>
+        <span class="ing-qty-lbl">${esc(ing.label)}</span>
+        <span class="ing-macros">
+          <span class="mpill p">P ${ing.p}g</span>
+          <span class="mpill c">C ${ing.c}g</span>
+          <span class="mpill f">F ${ing.f}g</span>
+        </span>
+        <button class="ing-remove" onclick="removeIng(${i})">&#x2715;</button>
+      </div>`).join('');
+  let tp=0,tc=0,tf=0;
+  currentIngs.forEach(i=>{tp+=i.p;tc+=i.c;tf+=i.f;});
+  const kc=Math.round(tp*4+tc*4+tf*9);
+  document.getElementById('prev-kcal').textContent=kc;
+  document.getElementById('prev-p').textContent=Math.round(tp);
+  document.getElementById('prev-c').textContent=Math.round(tc);
+  document.getElementById('prev-f').textContent=Math.round(tf);
+  const nf=document.getElementById('meal-name-input');
+  if(!nf._userEdited&&currentIngs.length)nf.value=currentIngs.map(i=>i.name).join(', ');
+}
+
+// ═══════════════════════════════════════════════════
+// GRID
+// ═══════════════════════════════════════════════════
+function renderGrid(){
+  const grid=document.getElementById('week-grid');grid.innerHTML='';
+  DAYS.forEach((day,di)=>{
+    const col=document.createElement('div');col.className='day-col';
+    let totP=0,totC=0,totF=0;
+    for(let si=0;si<SLOTS.length;si++){const m=meals[`${di}-${si}`];if(m)m.ingredients.forEach(ig=>{totP+=ig.p;totC+=ig.c;totF+=ig.f;});}
+    const kcal=Math.round(totP*4+totC*4+totF*9),maxM=Math.max(totP,totC,totF,1);
+    col.innerHTML=`<div class="day-header"><div class="day-name">${day.slice(0,3)}</div><div class="day-date">${day}</div></div>`;
+    SLOTS.forEach((slot,si)=>{
+      const key=`${di}-${si}`,m=meals[key],el=document.createElement('div');
+      el.className=`meal-slot s${Math.min(si,4)}`;el.onclick=()=>openModal(key);
+      if(m&&m.ingredients.length){
+        let mp=0,mc=0,mf=0;m.ingredients.forEach(ig=>{mp+=ig.p;mc+=ig.c;mf+=ig.f;});
+        const mk=Math.round(mp*4+mc*4+mf*9);
+        const lines=m.ingredients.map(ig=>`<div class="slot-item-line">${esc(ig.name)}${ig.label?` <span style="color:var(--text3)">(${esc(ig.label)})</span>`:''}</div>`).join('');
+        el.innerHTML=`<button class="del-btn" onclick="event.stopPropagation();delMeal('${key}')">&#x2715;</button>
+          <div class="slot-type">${slot}</div>
+          <div class="slot-items">${lines}</div>
+          <div class="slot-macros">
+            <span class="mpill p">P&nbsp;${Math.round(mp)}g</span>
+            <span class="mpill c">C&nbsp;${Math.round(mc)}g</span>
+            <span class="mpill f">F&nbsp;${Math.round(mf)}g</span>
+            <span class="mpill kc">${mk}&nbsp;kcal</span>
+          </div>`;
+      }else{
+        el.innerHTML=`<div class="slot-type">${slot}</div><div class="slot-empty">+ add meal</div>`;
+      }
+      col.appendChild(el);
+    });
+    const tots=document.createElement('div');tots.className='day-totals';
+    tots.innerHTML=kcal>0
+      ?`<div class="day-kcal">${kcal.toLocaleString()} kcal</div>
+        <div class="day-macro-blocks">
+          <div class="macro-block"><div class="macro-block-val" style="color:var(--protein)">${Math.round(totP)}g</div><div class="macro-block-lbl">Protein</div><div class="bar-track"><div class="bar-fill p" style="width:${pct(totP,maxM)}%"></div></div></div>
+          <div class="macro-block"><div class="macro-block-val" style="color:var(--carbs)">${Math.round(totC)}g</div><div class="macro-block-lbl">Carbs</div><div class="bar-track"><div class="bar-fill c" style="width:${pct(totC,maxM)}%"></div></div></div>
+          <div class="macro-block"><div class="macro-block-val" style="color:var(--fat)">${Math.round(totF)}g</div><div class="macro-block-lbl">Fat</div><div class="bar-track"><div class="bar-fill f" style="width:${pct(totF,maxM)}%"></div></div></div>
+        </div>`
+      :`<div class="day-no-meals">No meals added yet</div>`;
+    col.appendChild(tots);grid.appendChild(col);
+  });
+}
+function pct(v,max){return Math.round(v/max*100);}
+
+// ═══════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════
+function openModal(key){
+  activeKey=key;selectedFood=null;acHL=-1;
+  const [di,si]=key.split('-').map(Number),m=meals[key];
+  document.getElementById('modal-title').textContent=(m?'Edit ':'Add ')+SLOTS[si]+' \u2014 '+DAYS[di];
+  document.getElementById('search-input').value='';
+  document.getElementById('ac-list').innerHTML='';document.getElementById('ac-list').classList.remove('open');
+  document.getElementById('qty-input').value=1;document.getElementById('unit-select').value='serving';
+  document.getElementById('describe-input').value='';
+  document.getElementById('ai-status-msg').className='ai-status-msg';
+  currentIngs=m?m.ingredients.map(i=>({...i})):[];
+  const nf=document.getElementById('meal-name-input');
+  nf.value=m?m.name:'';nf._userEdited=!!m;
+  updateIngList();setMode('ai');
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('describe-input').focus(),80);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('meal-name-input').addEventListener('input',function(){this._userEdited=true;});
+});
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');activeKey=null;}
+function overlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+function saveMeal(){
+  if(!currentIngs.length){toast('Add at least one ingredient','err');return;}
+  const name=document.getElementById('meal-name-input').value.trim()||currentIngs.map(i=>i.name).join(', ');
+  meals[activeKey]={name,ingredients:[...currentIngs]};
+  closeModal();renderGrid();localSave();toast('Meal saved','ok');
+}
+function delMeal(key){delete meals[key];renderGrid();localSave();}
+function clearWeek(){
+  if(!Object.keys(meals).length)return;
+  if(confirm('Clear all meals for the week?')){meals={};renderGrid();localSave();}
+}
+
+// ═══════════════════════════════════════════════════
+// SHOPPING LIST
+// ═══════════════════════════════════════════════════
+function buildShoppingList(){
+  const keys=Object.keys(meals);if(!keys.length){toast('Add some meals first','');return;}
+  const countMap={};
+  keys.forEach(key=>meals[key].ingredients.forEach(ing=>{
+    const k=ing.name.toLowerCase();
+    if(!countMap[k])countMap[k]={name:ing.name,count:0,gramsTotal:0};
+    countMap[k].count++;countMap[k].gramsTotal+=ing.grams||0;
+  }));
+  const catMap={};
+  Object.values(countMap).forEach(({name,count,gramsTotal})=>{
+    const cat=categorise(name);if(!catMap[cat])catMap[cat]=[];
+    let entry=name;
+    if(gramsTotal>0)entry+=` \u2014 ${gramsTotal}g`;
+    if(count>1)entry+=` (${count}\u00d7 this week)`;
+    catMap[cat].push(entry);
+  });
+  const ordered=[];
+  SHOP_CATS.forEach(sc=>{if(catMap[sc.name])ordered.push({name:sc.name,items:catMap[sc.name]});});
+  if(catMap["Other"])ordered.push({name:"Other",items:catMap["Other"]});
+  renderShopList(ordered,keys.length);toast('Shopping list ready','ok');
+}
+function renderShopList(cats,mealCount){
+  document.getElementById('shop-meta').textContent=`Shopping list for ${mealCount} planned meals \u00b7 Tick off as you shop`;
+  if(!cats.length){document.getElementById('shop-output').innerHTML='<div class="empty-state"><p>No ingredients found.</p></div>';return;}
+  const grid=document.createElement('div');grid.className='shop-grid';
+  cats.forEach(cat=>{
+    const card=document.createElement('div');card.className='shop-category';
+    card.innerHTML=`<div class="shop-cat-name">${esc(cat.name)}</div>`+
+      cat.items.map(item=>{const id='si'+Math.random().toString(36).substr(2,9);
+        return `<div class="shop-item" id="r${id}"><input type="checkbox" id="${id}" onchange="toggleItem('r${id}',this)"><label for="${id}">${esc(item)}</label></div>`;
+      }).join('');
+    grid.appendChild(card);
+  });
+  document.getElementById('shop-output').innerHTML='';document.getElementById('shop-output').appendChild(grid);
+}
+function toggleItem(rowId,cb){document.getElementById(rowId).classList.toggle('done',cb.checked);}
+function copyList(){
+  const lines=[];
+  document.querySelectorAll('.shop-category').forEach(cat=>{
+    lines.push('\n'+cat.querySelector('.shop-cat-name').textContent.toUpperCase());
+    cat.querySelectorAll('label').forEach(l=>lines.push('• '+l.textContent));
+  });
+  if(!lines.length){toast('Generate a list first','');return;}
+  navigator.clipboard.writeText(lines.join('\n').trim()).then(()=>toast('Copied','ok')).catch(()=>toast('Copy failed',''));
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function showTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+}
+function toast(msg,type){
+  const el=document.getElementById('toast');el.textContent=msg;
+  el.className='toast'+(type?' '+type:'')+' show';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2800);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+localLoad();
+renderGrid();
+updateApiBar();
+</script>
+</body>
+</html>
